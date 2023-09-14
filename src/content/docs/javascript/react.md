@@ -3,6 +3,245 @@ title: React
 description: My notes on React, and useful links
 ---
 
+## Fetching Data
+
+When fetching data you'll want to do it in a `useEffect`, and have 3 state variables. The state you want to set with the data, an error state (thrown in the then/after the await where it occurs and caught in your `catch` block) which conditionally displays the error screen and a loading state set to false in your `finally` call. The `promise.then().catch().finally()` syntax actually looks more natural to me for stuff like this, maybe try that next project or at least a mixture.
+
+Probably a good idea to extract the whole data-fetching thing into a custom hook which can be destructured for the 3 states and re-used in other components like:
+
+```js
+const useImageURL = () => {
+  const [imageURL, setImageURL] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("https://jsonplaceholder.typicode.com/photos", { mode: "cors" })
+      .then((response) => {
+        if (response.status >= 400) {
+          throw new Error("server error");
+        }
+        return response.json();
+      })
+      .then((response) => setImageURL(response[0].url))
+      .catch((error) => setError(error))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { imageURL, error, loading };
+};
+```
+
+#### Promise style
+
+```js
+useEffect(() => {
+  fetch("https://jsonplaceholder.typicode.com/photos", { mode: "cors" })
+    .then((response) => {
+      if (response.status >= 400) {
+        throw new Error("server error");
+      }
+      return response.json();
+    })
+    .then((response) => setImageURL(response[0].url))
+    .catch((error) => setError(error))
+    .finally(() => setLoading(false));
+}, []);
+```
+
+#### Async/await style
+
+```js
+
+```
+
+### [Chasing Waterfalls](https://www.developerway.com/posts/how-to-fetch-data-in-react)
+
+In React functions inside components aren't called until rendered, including `useEffect`. So the parent has to fetch its data and render first, followed by the children. This creates a waterfall effect when multiple components in the same tree all need to fetch data. One solution is to lift all requests into the parent component and make them concurrently when it renders, then pass the results relevant to the children as props. In the meantime, have the children display a loading state.
+
+#### Multiple Concurrent Requests
+
+When you lift a bunch of `useEffects` into a parent component, you still need a way to make them concurrent as `await`s one after the other will still just be a waterfall. You could put all the requests inside a `Promise.all()`:
+
+`Promise.all()`
+
+```js
+const useAllData = () => {
+  const [sidebar, setSidebar] = useState();
+  const [comments, setComments] = useState();
+  const [issue, setIssue] = useState();
+
+  useEffect(() => {
+    const dataFetch = async () => {
+      // waiting for allthethings in parallel
+      const result = (
+        await Promise.all([
+          fetch(sidebarUrl),
+          fetch(issueUrl),
+          fetch(commentsUrl),
+        ])
+      ).map((r) => r.json());
+
+      // and waiting a bit more - fetch API is cumbersome
+      const [sidebarResult, issueResult, commentsResult] = await Promise.all(
+        result
+      );
+
+      // when the data is ready, save it to state
+      setSidebar(sidebarResult);
+      setIssue(issueResult);
+      setComments(commentsResult);
+    };
+
+    dataFetch();
+  }, []);
+
+  return { sidebar, comments, issue };
+};
+```
+
+But that still requires waiting for all 3 requests to succeed before rendering. Setting up multiple concurrent promises which set their respective state when resolved allows you to render each component as its data becomes available:
+
+```js
+fetch("/get-sidebar")
+  .then((data) => data.json())
+  .then((data) => setSidebar(data));
+fetch("/get-issue")
+  .then((data) => data.json())
+  .then((data) => setIssue(data));
+fetch("/get-comments")
+  .then((data) => data.json())
+  .then((data) => setComments(data));
+```
+
+and to render each component as the relevant data arrives
+
+```js
+const App = () => {
+  const { sidebar, issue, comments } = useAllData();
+
+  // show loading state while waiting for sidebar
+  if (!sidebar) return 'loading';
+
+  // render sidebar as soon as its data is available
+  // but show loading state instead of issue and comments while we're waiting for them
+  return (
+    <>
+      <Sidebar data={sidebar} />
+      <!-- render local loading state for issue here if its data not available -->
+      <!-- inside Issue component we'd have to render 'loading' for empty comments as well -->
+      {issue ? <Issue comments={comments} issue={issue} /> : 'loading''}
+    </>
+  )
+}
+```
+
+This does have the downside of triggering a re-render of your whole app every time data arrives though, so if rendering all your components takes a while the `Promise.all()` approach may be better to only have to render once.
+
+Yet another approach would be to wrap the app component (in root) with context providers for each piece of data which needs fetching like so:
+
+##### One of these for each fetch request
+
+```js
+const Context = React.createContext();
+
+export const CommentsDataProvider = ({ children }) => {
+  const [comments, setComments] = useState();
+
+  useEffect(async () => {
+    fetch("/get-comments")
+      .then((data) => data.json())
+      .then((data) => setComments(data));
+  }, []);
+
+  return <Context.Provider value={comments}>{children}</Context.Provider>;
+};
+
+export const useComments = () => useContext(Context);
+```
+
+`App.tsx`
+
+```tsx
+const App = () => {
+  const sidebar = useSidebar();
+  const issue = useIssue();
+
+  // show loading state while waiting for sidebar
+  if (!sidebar) return 'loading';
+
+  // no more props drilling for any of those
+  return (
+    <>
+      <Sidebar />
+      {issue ? <Issue /> : 'loading''}
+    </>
+  )
+}
+```
+
+`main.tsx`
+
+```tsx
+export const VeryRootApp = () => {
+  return (
+    <SidebarDataProvider>
+      <IssueDataProvider>
+        <CommentsDataProvider>
+          <App />
+        </CommentsDataProvider>
+      </IssueDataProvider>
+    </SidebarDataProvider>
+  );
+};
+```
+
+And then just access the context in the components which need it with something like `const comments = useComments();`, no prop-drilling required.
+
+Finally, you could just move the data fetching outside React altogether (outside the Root component) and await the variables in the relevant components. But this makes debugging an absolute mess, and can actually worsen performance by immediately fetching data for a component you may never even display before React itself for example. Only use if pre-fetching critical resources on the router level (maybe the case for my setsumeikai project) or when pre-fetching data inside lazy-loaded components (as by definition they're loaded after all critical data).
+
+### [Suspense](https://blog.logrocket.com/react-suspense-data-fetching/)
+
+It's behind an experimental flag for now, so please don't use it in production future Brett, but it simplifies adding loading states while you wait for fetched data. e.g.
+
+```js
+const Issue = () => {
+  return (
+    <>
+      // issue data
+      <Suspense fallback="loading">
+        <Comments />
+      </Suspense>
+    </>
+  );
+};
+```
+
+### [useEffect](https://react.dev/learn/synchronizing-with-effects)
+
+useEffect() hook manages side-effects like fetch requests, manipulating the DOM directly, and starting/ending timers.
+
+It takes 3 arguments, a callback describing how to start synchronizing, a callback describing how to stop synchronizing and an array of dependencies. When the component is first rendered the setup callback will run, and when a dependency changes the stop callback will run, then the synchronize callback will run again with the changed dependency taken into account.
+
+```js
+const serverUrl = "https://localhost:1234";
+
+function ChatRoom({ roomId }) {
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.connect();
+    return () => {
+      connection.disconnect();
+    };
+  }, [roomId]);
+  // ...
+}
+```
+
+Any reactive variable (one which might change during render) should be included in the dependency array. The linter will yell at you if you don't, so should be hard to mess up. Any variable in the function body will be reactive as it's redefined every render, so if you want a real static variable declare it outside the component or inside useEffect.
+
+If an empty dependency array is passed the setup callback will only run once when the component mounts, and the stop callback will only run when it dismounts.
+
 ## [React Router](https://reactrouter.com/en/main)
 
 The standard client-side routing library, allows React to change the URL (using the [History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API/Working_with_the_History_API)) like a MPA while staying on the same page and just rendering the new page with client-side JS.
@@ -214,28 +453,3 @@ First setup a user with `const user = userEvent.setup()`, then await actions lik
 Used to store the full DOM tree of a rendered test component and compare future test runs to it. Probably handy once finalized for regression testing, but since it's **everything** it's very likely to break at the slightest change and need to be recaptured.
 
 On a related note, snapshots can be updated. They can also be stored inline or in a separate file.
-
-## [useEffect](https://react.dev/learn/synchronizing-with-effects)
-
-useEffect() hook manages side-effects like fetch requests, manipulating the DOM directly, and starting/ending timers.
-
-It takes 3 arguments, a callback describing how to start synchronizing, a callback describing how to stop synchronizing and an array of dependencies. When the component is first rendered the setup callback will run, and when a dependency changes the stop callback will run, then the synchronize callback will run again with the changed dependency taken into account.
-
-```js
-const serverUrl = "https://localhost:1234";
-
-function ChatRoom({ roomId }) {
-  useEffect(() => {
-    const connection = createConnection(serverUrl, roomId);
-    connection.connect();
-    return () => {
-      connection.disconnect();
-    };
-  }, [roomId]);
-  // ...
-}
-```
-
-Any reactive variable (one which might change during render) should be included in the dependency array. The linter will yell at you if you don't, so should be hard to mess up. Any variable in the function body will be reactive as it's redefined every render, so if you want a real static variable declare it outside the component or inside useEffect.
-
-If an empty dependency array is passed the setup callback will only run once when the component mounts, and the stop callback will only run when it dismounts.
