@@ -11,9 +11,9 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: "Docs with Tailwind",
+      title: "Brett's Notes",
       social: {
-        github: "https://github.com/withastro/starlight",
+        github: "https://github.com/Brett-Tanner/wiki",
       },
       sidebar: [
         {
