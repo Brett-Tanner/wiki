@@ -17,6 +17,10 @@ export default defineConfig({
       },
       sidebar: [
         {
+          label: "HTML",
+          autogenerate: { directory: "html" },
+        },
+        {
           label: "Javascript",
           autogenerate: { directory: "javascript" },
         },

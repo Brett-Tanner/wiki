@@ -403,6 +403,11 @@ I'll [use Vitest for now](https://www.robinwieruch.de/vitest-react-testing-libra
 
 Key packages are `@testing-library/react` (for React-specific test helpers like `render()`), `@testing-library/jest-dom` (for custom DOM matchers) and `@testing-library/user-event` (a better version of the old `fireEvent` library which more accurately simulates user interaction).
 
+### Matchers
+
+[jest-dom](https://github.com/testing-library/jest-dom#custom-matchers)
+[Vitest](https://vitest.dev/api/expect.html)
+
 ### [Mocking](https://vitest.dev/guide/mocking.html)
 
 Allows you to mimic the functionality or choose the result of a callback or external resource in order to test the effects of that specific functionality/result. Also useful for [mocking child components](https://medium.com/@taylormclean15/jest-testing-mocking-child-components-to-make-your-unit-tests-more-concise-18691ef6a0c2) when testing a parent component.
