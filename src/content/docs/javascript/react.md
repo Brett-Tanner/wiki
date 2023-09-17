@@ -403,6 +403,8 @@ I'll [use Vitest for now](https://www.robinwieruch.de/vitest-react-testing-libra
 
 Key packages are `@testing-library/react` (for React-specific test helpers like `render()`), `@testing-library/jest-dom` (for custom DOM matchers) and `@testing-library/user-event` (a better version of the old `fireEvent` library which more accurately simulates user interaction).
 
+When testing a project with React Router, any component with a `Link` or `NavLink` component child will need to be wrapped in `<MemoryRouter><MemoryRouter />` tags to not throw an error in testing, as those components depend on the React Router context.
+
 ### Matchers
 
 [jest-dom](https://github.com/testing-library/jest-dom#custom-matchers)
