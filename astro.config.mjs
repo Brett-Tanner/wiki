@@ -17,6 +17,14 @@ export default defineConfig({
       },
       sidebar: [
         {
+          label: "CSS",
+          autogenerate: { directory: "css" },
+        },
+        {
+          label: "git",
+          autogenerate: { directory: "git" },
+        },
+        {
           label: "HTML",
           autogenerate: { directory: "html" },
         },
