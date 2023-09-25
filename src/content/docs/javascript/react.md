@@ -638,3 +638,7 @@ First setup a user with `const user = userEvent.setup()`, then await actions lik
 Used to store the full DOM tree of a rendered test component and compare future test runs to it. Probably handy once finalized for regression testing, but since it's **everything** it's very likely to break at the slightest change and need to be recaptured.
 
 On a related note, snapshots can be updated. They can also be stored inline or in a separate file.
+
+## Useful Links
+
+[Rails 7 w/React](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-ruby-on-rails-v7-project-with-a-react-frontend-on-ubuntu-20-04)
