@@ -3,6 +3,52 @@ title: React
 description: My notes on React, and useful links
 ---
 
+## [Context API](https://react.dev/reference/react/useContext)
+
+Provides a way to avoid [prop-drilling](https://kentcdodds.com/blog/prop-drilling), by creating a kind of 'global state'. Its 3 key components are `createContext`, `useContext` and `ContextObject.Provider`.
+
+Drawbacks are that it can cause performance issues by re-rendering every component which consumes it on state changes, even if not necessary.
+It also makes your code use less of a 'functional' style and can make it more difficult to track where data is coming from, as well as being kinda like global variables.
+
+Some ways to mitigate those issues are using smaller contexts for groups of related components rather than an app-wide context, using [composition](https://www.robinwieruch.de/react-component-composition/) to split your components into hyper-specialized ones which can be passed props separately or using external state management systems like [Redux](https://redux.js.org/) or [Zustand](https://github.com/pmndrs/zustand)
+
+### `createContext`
+
+Creates the context, takes a value which is used as the default value for that context and returns a context object which can be used to pass data to components.
+
+It's not required to set a default value, but will stop stuff breaking if you try to access context in a component it's not provided to and help with IDE autocomplete.
+
+```js
+const ShopContext = createContext({
+  products: [],
+  cartItems: [],
+  addToCart: () => {},
+});
+```
+
+### `ContextObject.Provider`
+
+`Provider` accepts a `value` prop, which will be made available to any components wrapped by the provider.
+
+```js
+return (
+  /* We are going to pass the things that we want to inject to these components using the value prop */
+  /* This value prop will overwrite the default value */
+  <ShopContext.Provider value={{ cartItems, products, addToCart }}>
+    <Header />
+    <ProductDetail />
+  </ShopContext.Provider>
+);
+```
+
+### `useContext`
+
+Is what you call in the component you want to access the context from. Accepts the context object as an argument and returns the values which can be destructured.
+
+```js
+const { cartItems } = useContext(ShopContext); // We must pass the ShopContext object itself as an argument
+```
+
 ## Fetching Data
 
 When fetching data you'll want to do it in a `useEffect`, and have 3 state variables. The state you want to set with the data, an error state (thrown in the then/after the await where it occurs and caught in your `catch` block) which conditionally displays the error screen and a loading state set to false in your `finally` call. The `promise.then().catch().finally()` syntax actually looks more natural to me for stuff like this, maybe try that next project or at least a mixture.
