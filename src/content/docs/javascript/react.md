@@ -433,6 +433,22 @@ Routes have an optional `loader` key used to store a function for fetching data 
 
 The retrieved data can then be destructured from `useLoaderData` inside the components of that route.
 
+When testing components with loaders, you'll need to create a `MemoryRouter` with the component you want as the sole (root) route and the loader or a mock of it attached, then put it inside a `RouterProvider` like this:
+
+```js
+const router = createMemoryRouter([
+  {
+    path: "/",
+    element: <SchoolList />,
+    loader: testGetSchools,
+  },
+]);
+
+function renderSchoolList() {
+  render(<RouterProvider router={router} />);
+}
+```
+
 ### Nested Routes
 
 Nested routes can be added by adding a `children` key to the object for the parent route and explicitly passing an array of routes or auto-generating them like `path: "profile/:name"`. They can be rendered inside their parent by adding an `<Outlet />` where you want the child to be rendered when its path is visited.
