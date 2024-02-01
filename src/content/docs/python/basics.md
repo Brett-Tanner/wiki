@@ -2,6 +2,18 @@
 title: Basics
 ---
 
+## Classes
+
+Differences from Ruby are that your initialize method is `__init__` (2 underscores on either side) and you need to pass self as the first argument to any instance method. Set instance variables (attributes) by prefixing them with `self.` rather than `@`.
+
+You don't need to call new on the class to create an instance, just pass the **init** arguments like `Class(arg1, arg2)`.
+
+Inheritance works by passing the class you want to inherit from like an argument to the class definition. The parent class must be defined earlier in the same file.
+
+You can also call `super().__init__(parent_params)` in `__init__` to call the parent class's init method.
+
+You wanna have your classes in modules, can be grouped if related or separate and imported.
+
 ## Conditionals
 
 & is `and`, || is `or`. Can use `value in list` like I use `includes?` in Ruby, also has a `not in` variant. Booleans are `True` and `False`.
@@ -17,6 +29,23 @@ Square bracket access raises an error, so if you don't want that use `dict.get()
 To loop over a dict use `for k, v in dict.items()` to get the pairs. You also have `dict.keys()` and `dict.values()`, wrap `values` with `set(values)` to get a unique set of values. Seems you get a dictview as the return value, not a list. But you can use `sorted(dictview)` or `reversed(dictview)` like you could with a list.
 
 They also have comprehensions like lists, which can be given in the form `{x: x ** 2 for x in range(10)}`.
+
+## Exceptions
+
+Objects ceated whenever an error occurs, can be handled with a try/except block or left unhandled to stop execution and show a traceback.
+
+```python
+try:
+    answer = 1 / 0
+except ZeroDivisionError as e:
+    print(e)
+else:
+    print(answer)
+```
+
+The contents of the else block are executed if no exception is raised.
+
+If you want to fail silently, python has a `pass` statement that tells the block to end without doing anything.
 
 ## Functions
 
