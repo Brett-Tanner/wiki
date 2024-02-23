@@ -14,6 +14,8 @@ You can also call `super().__init__(parent_params)` in `__init__` to call the pa
 
 You wanna have your classes in modules, can be grouped if related or separate and imported.
 
+Prefix 'private' (helper) methods with `_`.
+
 ## Conditionals
 
 & is `and`, || is `or`. Can use `value in list` like I use `includes?` in Ruby, also has a `not in` variant. Booleans are `True` and `False`.
@@ -64,6 +66,8 @@ Stuff like `len()` and `sum()` take the list as an argument, while `reverse` and
 Slice is interesting, used like `array[start:end:step]`. Can omit start to begin @ 0, end to end @ -1. Can use negative numbers to count from the end.
 
 You can use something called a 'comprehension' to kinda map over a list into a new one like `[v * 2 for v in values]`.
+
+Since you can't mutate a list while you're iterating over it, you can iterate over a `.copy()` of the list and remove the elements from the original list.
 
 ## Numbers
 
