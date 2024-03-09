@@ -76,6 +76,8 @@ You'll also need to create a route for it in `urls.py`, and add it to `admin.py`
 
 Created in the models.py file of an app folder. They import `models` from `django.db`, which you then call various functions named after field types on to define the fields.
 
+Fields are required by default.
+
 - `AutoField`/`BigAutoField` auto-incrementing PK, added automatically
 - `BinaryField` allows binary data to be stored as bytes/bytearray/memoryview. Editable is set to false by default
 - `BooleanField`
@@ -100,13 +102,16 @@ Created in the models.py file of an app folder. They import `models` from `djang
 The following options are available on all fields:
 
 - `blank` allows the form value to be blank, related to validations rather than `null`'s strict application to the DB
+  - generally used together with `null`
 - `choices` is an enum, can be provided in a few formats including a function. Changing the order requires a new migration.
 - `db_default`/`default` take a wild guess
 - `db_index` creates an index on the column
 - `editable` decides if the field will be displayed in admin or any other ModelForm. Also skips field validations if false.
 - `error_messages` lets you override default error error messages
 - `help_text` displays unescaped help text for the field on auto-generated forms
-- `null` allows the field to be null in the database, generally avoided for stringy fields as an empty string is preferred. The exception is when `unique` and `blank` are both also applied.
+- `null` allows the field to be null in the database
+  - generally avoided for stringy fields as an empty string is preferred., otherwise there would be 2 possible values for 'no data'
+  - The exception is when `unique` and `blank` are both also applied.
 - `on_delete` must be specified for `ForeignKey` fields; can be `CASCADE`, `PROTECT`, `RESTRICT`, `SET_NULL`, `SET_DEFAULT`, `SET()`, `DO_NOTHING`
 - `unique` enforced both at DB level and with validations
 - `unique_for_date`/`_month`/`_year` prevents this field being duplicated on the same date
@@ -147,6 +152,8 @@ There are 4 main steps to adding a custom user model:
 4. Add the custom user model to `admin.py`
 
 - Update `admin.py` with imports for `get_user_model` as well as `UserAdmin` and the new custom forms you just customized
+  - Add them to `list_display` to show them in the admin panel
+  - Add them to `fieldsets` and `add_fieldsets` to show them in edit and create forms respectively
 - Create a `CustomUserAdmin` class that extends `UserAdmin` and register it with `admin.site.register(CustomUser, CustomUserAdmin)`
 
 ### Migrations
@@ -188,8 +195,17 @@ Separated into function and class-based. Started with only function-based, but a
 
 Generic views can be imported to your views.py and then extended by your own views.
 
+- `CreateView` gives you access to a context variable `form`, which you can call `.as_p` on to generate a form from your `fields` array in the view.
+  - `__all__` as the fields variable adds all attributes from the model to the form
+  - `form_class` lets you use built-in forms like `UserCreationForm`
+- `DeleteView` is an actual view rather than a controller action like it is in Rails. Submitting the form triggers a delete.
+  - `success_url` in the view is the URL to redirect to after a successful delete
+  - use `reverse_lazy` rather than `reverse` to get the URL since it ensures the delete will happen prior to redirection
+- `DetailView` gives you access to a context variable `modelName` or `object`
 - `GenericView` is just a regular page
 - `ListView` gives you access to a context variable `modelName_list` which can be looped over
+- `LoginView` also gives you the form variable
+- `UpdateView` is the same as `CreateView` so far
 
 ### URLs
 
@@ -206,6 +222,8 @@ urlpatterns = [
 
 When giving the view for a class-based view, be sure to call `.as_view()` on it.
 
+For dynamic segments the syntax is like `post/<int:id>/`.
+
 ### Templates
 
 By default the path looks something like `/app/templates/app/template.html` for god knows what reason. You can also create a top level 'templates' directory and add it to `TEMPLATES` within settings.py.
@@ -214,9 +232,37 @@ By default the path looks something like `/app/templates/app/template.html` for 
 
 You can execute python using 'template tags' in templates using `{% template tag %}`. For example `{% url 'home' %}` would produce a link to the route named `home` in your urls.py.
 
+You need to explicitly wrap child templates in `{% block content%}{% endblock content %}` for them to be included in the template they inherit from.
+
 - `{% url 'app_name:route_name' %}`: produces a link to the named route within app_name
 - `{% block name %}{% endblock name %}`: allows the block to be overwritten in child templates
 - `{% extends 'base.html' %}`: add the the top of a child template to extend the named parent template
+
+## Static files
+
+By default are looked for in `/static` within each app, but can be configured ith `STATIC_URL` and `STATICFILES_DIRS` in settings.py.
+
+To use them, add `{% load static %}` to your base template then import the assets using `{% static 'path/within/static' %}`.
+
+### For production
+
+You'll need this in your settings.py:
+
+```python
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise or django.contrib.staticfiles.storage.StaticFilesStorage'
+```
+
+Then run `python manage.py collectstatic`. Seems whitenoise is most commonly used as the STATICFILES_STORAGE.
+
+### Installing whitenoise
+
+`pip install whitenoise`
+Add it to your INSTALLED_APPS in settings.py as `whitenoise.runserver_nostatic`.
+Add it to your MIDDLEWARE in settings.py as `whitenoise.middleware.WhiteNoiseMiddleware`.
+Change the STATICFILES_STORAGE in settings.py to `whitenoise.storage.CompressedManifestStaticFilesStorage`.
 
 ## [Deployment](https://docs.djangoproject.com/en/5.0/howto/deployment/)
 
@@ -225,3 +271,15 @@ You'll need to install gunicorn or another production web server as the included
 Add your domain to ALLOWED HOSTS in settings.py if you have one, otherwise just use a wildcard (`["*"]`) for the moment.
 
 `python manage.py check --deploy` will check some basic settings for you. You'll want to run it on your production settings file though, not the dev one.
+
+## Authentication
+
+New Django projects install the `auth` app by default, and a default User object which I made notes about extending earlier.
+
+The urls are found under `django.contrib.auth.urls`, and you'll need to add `LOGIN_REDIRECT_URL` in settings.py.
+
+Call `is_authenticated` on the user object to see if the user is authenticated.
+
+Create a logout link with `{% url 'logout' %}` and set the logout redirect path with `LOGIN_REDIRECT_URL` in settings.py.
+
+The signup view/url is not created by default, so you'll need to make it yourself. `UserCreationForm` and `UserChangeForm` are found in `django.contrib.auth.forms`. By default they give you a `username`, `password1` and `password2` field.
