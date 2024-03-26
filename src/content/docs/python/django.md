@@ -117,13 +117,16 @@ The following options are available on all fields:
 - `unique_for_date`/`_month`/`_year` prevents this field being duplicated on the same date
 - `verbose_name` allows setting the human-readable name of the field
 
-
 After defining the model you'll need to generate its migrations, run them and finally add it to `admin.py` to display it in the admin panel.
 
 ### Standard Methods
 
 - `__str__` appears to display whatever the return value is as the title of the model in the admin panel.
 - `get_absolute_url` tells Django how to calculate the canonical URL for an instance of the model.
+
+### Associations
+
+'has_many' are available on `model.<name>_set.all`.
 
 ### User Model
 
@@ -202,10 +205,25 @@ Generic views can be imported to your views.py and then extended by your own vie
   - `success_url` in the view is the URL to redirect to after a successful delete
   - use `reverse_lazy` rather than `reverse` to get the URL since it ensures the delete will happen prior to redirection
 - `DetailView` gives you access to a context variable `modelName` or `object`
+  - You can override `get_context_data` to make local variables available in the template
 - `GenericView` is just a regular page
 - `ListView` gives you access to a context variable `modelName_list` which can be looped over
 - `LoginView` also gives you the form variable
 - `UpdateView` is the same as `CreateView` so far
+
+### Automatically setting values in View
+
+To automatically set attributes on a model instance in the default class-based `CreateView`, simply add the following:
+
+```python
+def form_valid(self, form):
+    form.instance.user = self.request.user
+    # or
+    form.instance.attribute = predefined_value
+    return super().form_valid(form)
+```
+
+A useful resource for stuff like this related to class-based views is [Classy class-based views](https://ccbv.co.uk/).
 
 ### URLs
 
@@ -244,6 +262,10 @@ By default are looked for in `/static` within each app, but can be configured it
 
 To use them, add `{% load static %}` to your base template then import the assets using `{% static 'path/within/static' %}`.
 
+### Pages App
+
+Convention is to use a `pages` app to handle the files and URLs for static pages like auth/about/contact etc.
+
 ### For production
 
 You'll need this in your settings.py:
@@ -264,6 +286,10 @@ Add it to your INSTALLED_APPS in settings.py as `whitenoise.runserver_nostatic`.
 Add it to your MIDDLEWARE in settings.py as `whitenoise.middleware.WhiteNoiseMiddleware`.
 Change the STATICFILES_STORAGE in settings.py to `whitenoise.storage.CompressedManifestStaticFilesStorage`.
 
+### Tailwind
+
+You can just install and initialize tailwind like usual, make sure the input and output css files are both in the directory your static files are generated from. You'll also need to remember to `{% load static %}` at the top of your base template in addition to linking the output stylesheet, otherwise you won't be able to use the compiled output.
+
 ## [Deployment](https://docs.djangoproject.com/en/5.0/howto/deployment/)
 
 You'll need to install gunicorn or another production web server as the included one is not production ready.
@@ -280,6 +306,53 @@ The urls are found under `django.contrib.auth.urls`, and you'll need to add `LOG
 
 Call `is_authenticated` on the user object to see if the user is authenticated.
 
-Create a logout link with `{% url 'logout' %}` and set the logout redirect path with `LOGIN_REDIRECT_URL` in settings.py.
+Set the logout redirect path with `LOGOUT_REDIRECT_URL` in settings.py. Logging out with a link is no longer supported as of Django 5.0, so you need a form like so:
+
+```html
+<form action="{% url 'logout' %}" method="post">
+  {% csrf_token %}
+  <input type="submit" value="Logout" />
+</form>
+```
 
 The signup view/url is not created by default, so you'll need to make it yourself. `UserCreationForm` and `UserChangeForm` are found in `django.contrib.auth.forms`. By default they give you a `username`, `password1` and `password2` field.
+
+### Authorisation
+
+To require login for access to a given view `from django.contrib.auth.mixins import LoginRequiredMixin`, then add it as the first argument to the view, before any default views are inherited from.
+
+Or, if you require for auth for all the real content of your site and don't feel like endless copy/pasting, add a custom middleware like this:
+
+```python
+from django.shortcuts import redirect
+from django.conf import settings
+
+
+class LoginRequiredMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.login_url = settings.LOGIN_URL
+        self.open_urls = [self.login_url] + getattr(settings, "OPEN_URLS", [])
+
+    def __call__(self, request):
+        print(request.user.is_authenticated)
+        if (
+            not request.user.is_authenticated
+            and not request.path_info in self.open_urls
+        ):
+            return redirect(self.login_url)
+
+        return self.get_response(request)
+```
+
+in `/middleware` and activate it in settings.py MIDDLEWARE like this:
+
+```python
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    ...
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "middleware.authorization.LoginRequiredMiddleware",
+    ...
+]
+```
