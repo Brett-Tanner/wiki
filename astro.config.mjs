@@ -29,6 +29,10 @@ export default defineConfig({
 					autogenerate: { directory: "css" },
 				},
 				{
+					label: "Go",
+					autogenerate: { directory: "go" },
+				},
+				{
 					label: "HTML",
 					autogenerate: { directory: "html" },
 				},
@@ -43,6 +47,10 @@ export default defineConfig({
 				{
 					label: "Rails",
 					autogenerate: { directory: "rails" },
+				},
+				{
+					label: "Rust",
+					autogenerate: { directory: "rust" },
 				},
 			],
 			customCss: ["./src/tailwind.css"],
