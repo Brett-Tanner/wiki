@@ -11,15 +11,20 @@ Code is grouped into packages (which are grouped in folders named after the pack
 ## Syntax
 
 - `_` is the blank identifier, which can be used in place of a variable name. Usually the compiler throws an error on unused variables or imports, but will ignore them if assigned to `_`.
+- `&` is the address-of operator, which returns the address of a variable.
+- `*` denotes a pointer, which is automatically dereferenced to its value.
 - `func <name>(<args>) <return type> { <body> }` defines a function.
+  - function args (including the receiver) are copied by default, so if you need to mutate them pass a pointer
   - By convention public functions start with a capital letter, while private functions start with a lowercase letter.
   - `func <name>(<args> ...)` defines a variadic function, which can take any number of arguments. When passing a slice spread it with `<slice>...`
+  - you can `defer` functions so they're executed at the end of the containing function
 - `if` doesn't require brackets around the predicate, but does require curly braces around the code to execute
 - `range` is a builtin that iterates over a slice or array, returning the index and value for each iteration
 - `switch <variable>` uses `case: variable` and `default:` inside curly braces
 - `varName := value` declares a variable.
   - `const varName = value` declares a constant.
   - `var varName value` declares a variable with an initial value. Can also be declared without an initial value like `var varName <type>`.
+    - the variable will be globally available within its package
   - you can declare multiple variables at once with const by wrapping them in brackets and separating them with newlines
 
 ### Loops
@@ -84,7 +89,7 @@ Tests must:
 - Only take one argument, t, with type \*testing.T
 - Import `testing`
 
-You can check your test coverage with `go test -cover`.
+You can check your test coverage with `go test -cover`, while `go test -race` will check for race conditions and give more detailed info if they're found.
 
 ### `t` methods
 
@@ -99,9 +104,11 @@ You can check your test coverage with `go test -cover`.
   - `%d` prints the value as an integer
   - `%f` prints the value as a float, add `.n` to specify the number of decimal places
   - `%g` prints teh value as a float to the last significant digit
+  - `%s` prints the value as uninterpreted bytes of the string or slice
   - `%q` prints the value in quotes
   - `%v` prints the value as is
     - `%#v` prints
+- `t.Fatal()` is equivalent to `t.Errorf()` and also fails the test.
 - `t.Helper()` marks the current function as a test helper. This ensures failures will print the line number in the actual test that failed, rather than in the helper.
 - `t.Run(<description>, func(t *testing.T))` defines a sub-test.
 
@@ -148,6 +155,34 @@ func ExampleAdd() {
   // Output: 4
 }
 ```
+
+### Mocks
+
+You just need to create a struct fulfilling the interface you require for the mocked argument.
+
+A 'spy' variant would be a struct with an internal counter incremented (or taking some other action) when the method is called.
+
+#### HTTP Mocks
+
+The `net/http/httptest` package lets you easily create a mock HTTP server for testing, and allows you to create test servers like so whose URLs can then have test requests made to them which will return the test response.
+
+```go
+slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    time.Sleep(20 * time.Millisecond)
+    w.WriteHeader(http.StatusOK)
+}))
+
+fastServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+}))
+
+slowURL := slowServer.URL
+fastURL := fastServer.URL
+```
+
+`httptest.NewServer` returns a struct with the server's URL and a `Close` method which can be called to stop the server. It takes an `http.HandlerFunc` which will be called when the server receives a request. The `http.HandlerFunc` itself takes an anonymous function with a response writer and a http request as parameters. Remember to close the servers when you're done with `server.Close()`.
+
+Incidentally, this is exactly how you'd write a real http server in Go, but it automatically finds an open port to listen on and lets you close it when you're done with it.
 
 ### Table-driven Tests
 
@@ -202,6 +237,8 @@ Usually declared separated by a space from the variable. If you have multiple ar
 
 Function return types are added after the argument list, and can be named (in brackets with the return type) to create a variable with that name in the function body initialized to the 'zero value' of the type.
 
+You can create your own types from existing ones like `type <newName> <existingType>`. For example, `type Bitcoin int` can then be used to create Bitcoin with the syntaxt `Bitcoin(n)`.
+
 ### Arrays/Slices
 
 Initialized with a fixed capacity, and default initial values set to the zero value for the provided type. Their size is actually part of their type, so trying to pass a `[4]int` to a function that expects a `[5]int` will fail.
@@ -232,11 +269,29 @@ Attempting to access an index outside the slice's capacity will cause a runtime 
 
 You can slice a slice (or an array) with `slice[<start>:<end>]`. Omitting the end slices everything from the start, while omitting the start slices everything until the end. Remember that slices of an array will keep that array around in memory until they disappear, so if you want the array to be garbage collected make a copy of the slice and use that.
 
+### Errors
+
+It's idiomatic to return errors to be handled by the caller. You'll need to add `error` as the return type, and create a customised error to return with `errors.New(<string>)`.
+
+You can access the error message with `err.Error()`.
+
 ### [Interfaces](https://jordanorelli.com/post/32665860244/how-to-use-interfaces-in-go)
 
 An interface is a named collection of methods, declared with `type <name> interface { <methodList> }` where `<methodList>` is a list of methods and their return types.
 
-A struct implements the interface if it has all the methods in the interface, as opposed to the usual behaviour of having to explicitly implement it. You can type a function argument as an interface, which allows you to pass any struct implementing that interface as that argument.
+A struct or type implements the interface if it has all the methods in the interface, as opposed to the usual behaviour of having to explicitly implement it. You can type a function argument as an interface, which allows you to pass any struct implementing that interface as that argument.
+
+### Maps
+
+Key/value pairs, like a hash in Ruby. Instantiated with `map[<keyType>]<valueType>{<key>: <value>, ...}`. Keys can only be valid comparable types.
+
+You look up values like in any other language, but there are two values which can be returned from a key lookup, the value and a boolean indicating the success or failure of the lookup.
+
+Maps can be modified without passing an address to them, but are not reference types. A map value is a pointer to a `runtime.hmap` structure. So when you pass a map to a function/method you copy it, but only the pointer part.
+
+`nil` maps exist and behave like an empty map when reading, but cause a runtime panic when writing. Therefore never initialize an empty map variable, always at least assign it an empty map.
+
+When writing to an existing key, by the current value will be overwritten by the newly provided one.
 
 ### Structs
 
@@ -251,7 +306,7 @@ type Point struct {
 }
 ```
 
-Struct fields can be accessed with dot notation, and are initialised to their type's zero value if not explicitly set. It's idiomatic to create new structs in a factory function which returns a pointer to the struct, though if they're as simple as my example above you're probably fine to just use the `Point{5, 10}` or `Point{X: 5, Y: 10}` syntax. `&` as a prefix yields a pointer to the struct.
+Public struct fields start with a capital and can be accessed with dot notation, while private fields are lowercase and cannot be accessed outside the package they're defined in. All fields are initialised to their type's zero value if not explicitly set. It's idiomatic to create new structs in a factory function which returns a pointer to the struct, though if they're as simple as my example above you're probably fine to just use the `Point{5, 10}` or `Point{X: 5, Y: 10}` syntax. `&` as a prefix yields a pointer to the struct.
 
 Structs can have methods, which are functions with a receiver of the struct type. They're declared in a very similar way to functions, but with an added receiver type:
 
@@ -270,3 +325,53 @@ func (r Rectangle) Area() float64 {
 Unlike in other languages, the receiver is not available as `this` or `self` but as the name provided in the receiver type, by default the first letter of the type.
 
 Methods can be called with dot notation. Remember public methods start with a capital, and unlike Ruby you always need the trailing brackets when calling a method, even if it has no args.
+
+## Concurrency
+
+Handled by 'goroutines', which are lightweight threads that run concurrently with the main thread. They're created with `go <function>()` and are automatically garbage collected when they're done.
+
+If the code you're running in a goroutine isn't a function you generally use it in an anonymous function like:
+
+```go
+go func() {
+    fmt.Println("Hello, world")
+}()
+```
+
+Anonymous functions have access to all variables in the scope they're declarde in, and the brackets at the end mean it's executed at the same time it's declared, just like in JS.
+
+### Channels
+
+Using goroutines opens you up to race conditions like concurrent map writes, which will cause a runtime panic. These can be detected in tests by running them with the race flag like `go test -race`.
+
+You can avoid race conditions with channels, a data structure (declared with `chan <type>`) which can both send and receive values to act as a buffer for the results.
+
+Send a value to the channel with `channel <- value` (`<-` is the send operator), and receive with `value := <-channel`.
+
+You should always `make` channels otherwise it'll be initialised with the zero value for channels (`nil`) and block forever because you can't sent to `nil` channels.
+
+### Select
+
+`select` is like `Promise.race` in JS, the first channel to send a value 'wins' and the code underneath that `case` is executed.
+
+Can use closing an empty `chan struct{}` (this type is chosen since it's the smallest possible memory allocation) to indicate that a goroutine is done.
+
+```go
+func Racer(a, b string) string {
+	select {
+	case <-ping(a):
+		return a
+	case <-ping(b):
+		return b
+	}
+}
+
+func ping(url string) chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		http.Get(url)
+		close(ch)
+	}()
+	return ch
+}
+```
