@@ -352,6 +352,11 @@ Send a value to the channel with `channel <- value` (`<-` is the send operator),
 
 You should always `make` channels otherwise it'll be initialised with the zero value for channels (`nil`) and block forever because you can't sent to `nil` channels.
 
+Channels and mutexes seem to have similar functions, so remember:
+
+- Channels are for passing ownership of data
+- Mutexes are for managing state
+
 ### Select
 
 `select` is like `Promise.race` in JS, the first channel to send a value 'wins' and the code underneath that `case` is executed.
@@ -377,6 +382,23 @@ func ping(url string) chan struct{} {
 	return ch
 }
 ```
+
+### Sync
+
+`sync` provides primitives for synchronizing access to shared data.
+
+`WaitGroup` waits for a certain number of goroutines to finish executing; set with `wg.Add(<number>)` in the main goroutine prior to the start of concurrent code and decremented with `wg.Done()` in each goroutine. Can be used to block all until all the goroutines have finished with `wg.Wait()`.
+
+You can use a mutex (mutually exclusive lock) to ensure that only one goroutine at a time accesses a shared data structure. Simply add a mutex to the struct and call `m.Lock()` and `m.Unlock()` to lock and unlock it at the beginning and end of code altering the structure which needs to be safe for concurrency. It's best practise to call `defer m.Unlock()` right after locking the mutex, as this ensures it will be unlocked even if the code following it panics.
+
+It's best declare the mutex as a field on the struct rather than embedding it into the struct itself as this avoids exposing `Lock/Unlock` to the outside world.
+
+Mutexes should not be copied after first, so pass the struct containing them by reference rather than by value. You may want to create a constructor for the struct which returns a reference to it, to discourage passing it by value.
+
+Channels and mutexes seem to have similar functions, so remember:
+
+- Channels are for passing ownership of data
+- Mutexes are for managing state
 
 ## [Reflection](https://go.dev/blog/laws-of-reflection)
 
