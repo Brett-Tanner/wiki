@@ -182,6 +182,8 @@ fastURL := fastServer.URL
 
 `httptest.NewServer` returns a struct with the server's URL and a `Close` method which can be called to stop the server. It takes an `http.HandlerFunc` which will be called when the server receives a request. The `http.HandlerFunc` itself takes an anonymous function with a response writer and a http request as parameters. Remember to close the servers when you're done with `server.Close()`.
 
+`time.After()` returns a channel that will receive a value after the specified duration. Useful for preventing your test blocking forever or simulating slow servers.
+
 Incidentally, this is exactly how you'd write a real http server in Go, but it automatically finds an open port to listen on and lets you close it when you're done with it.
 
 ### Table-driven Tests
@@ -271,7 +273,7 @@ You can slice a slice (or an array) with `slice[<start>:<end>]`. Omitting the en
 
 ### Errors
 
-It's idiomatic to return errors to be handled by the caller. You'll need to add `error` as the return type, and create a customised error to return with `errors.New(<string>)`.
+It's idiomatic to return errors to be handled by the receiver. You'll need to add `error` as the return type, and create a customised error to return with `errors.New(<string>)`.
 
 You can access the error message with `err.Error()`.
 
@@ -375,3 +377,24 @@ func ping(url string) chan struct{} {
 	return ch
 }
 ```
+
+## [Reflection](https://go.dev/blog/laws-of-reflection)
+
+Reflection is the ability of a its own structure at runtime, particularly through types.
+
+Can be useful when you don't know a given type at compile time; passing `interface{}` as a type is the equivalent of `any` in TS (in fact `any` in Go is an alias for `interface{}`). However this is not something you want to overuse because you lose type safety and have to use reflection to figure out which type was passed, which can cause performance issues.
+
+### General Methods
+
+- `Elem()` returns the value the interface receiver contains or that the pointer receiver points to.
+- `Interface()` returns the current value of a variable as an `interface{}`.
+- `Kind()` returns the kind of a variable, which is a `reflect.Kind` enum representing the variable's type.
+- `TypeOf()` returns a `reflect.Type` of a given variable.
+- `ValueOf()` returns a `reflect.Value` of a given variable.
+
+### Value Methods
+
+- `val.Field(i)` returns the `i`th field of a struct. Panics if val is not a struct.
+- `val.NumField()` returns the number of fields in a struct. Panics if val is not a struct.
+- `val.Recv()` receives and returns a value from a channel, as well as a boolean which is false if the channel is closed
+- `val.Call(*args)` calls a function with the given arguments
