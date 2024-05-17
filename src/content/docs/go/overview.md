@@ -186,6 +186,8 @@ fastURL := fastServer.URL
 
 Incidentally, this is exactly how you'd write a real http server in Go, but it automatically finds an open port to listen on and lets you close it when you're done with it.
 
+`time.AfterFunc(wait, func)` executes func after the specified wait.
+
 ### Table-driven Tests
 
 Good for reducing code duplication when you want to run the same test for a bunch of different implementations of the same interface.
@@ -399,6 +401,18 @@ Channels and mutexes seem to have similar functions, so remember:
 
 - Channels are for passing ownership of data
 - Mutexes are for managing state
+
+### Context
+
+Used to manage long running goroutines. The package provides functions to derive new context values from existing ones, forming a tree in which the cancellation of one context also cancels all contexts derived from it.
+
+Apparently deriving the contexts is important to ensure cancellations are propagated throughout the call stack for a given request, but not quite sure why.
+
+- `context.WithCancel(context)` creates a copy of the passed context with a new 'Done' channel and returns that copy plus a `cancel` function which can be called to close the 'Done' channel.
+- `context.Done()` returns the 'Done' channel of the caller context, which is sent a signal when the context is 'done' or cancelled.
+- `request.WithContext(ctx)` creates a shallow copy of the parent request with its context set to the passed context.
+
+`context.Value` also exists as an untyped map; it should be avoided for required input or to produce expected results, but only for stuff like trace data useful to maintainers. If at all.
 
 ## [Reflection](https://go.dev/blog/laws-of-reflection)
 
