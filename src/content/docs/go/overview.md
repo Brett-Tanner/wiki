@@ -75,8 +75,14 @@ Best practice to edit it with Go commands like `go mod edit`, `go mod tidy` and 
 
 ### [Strings](https://pkg.go.dev/strings)
 
+- `strings.Builder` initializes a string which can be efficiently added to with Write methods in a way that minimizes memory copying.
+  - Since you can use it with basically the same amount of code as adding to a plain string, may as well by default when creating mutable strings
+  - `stringBuilder.WriteString(string)` can be used to add a string to the builder
+  - `stringBuilder.String()` gets the result string when you're done
 - `strings.ContainsFunc(s, func(rune) bool) bool` returns true if the string contains any character that satisfies the function
 - `strings.Map(func(rune) rune, s string) string` applies a function to every character in a string, drops char with no replacement if negative value returned
+
+Indexing a string gives you a byte, not a string.
 
 ## Testing
 
@@ -88,6 +94,8 @@ Tests must:
 - Be named `Test*`
 - Only take one argument, t, with type \*testing.T
 - Import `testing`
+
+If you put your tests in a package suffixed with '\_test', they can only access exported members of the package, whereas tests in the regular package can access all members. Having it as part of a different pacakage also means you need to import the package being tested.
 
 You can check your test coverage with `go test -cover`, while `go test -race` will check for race conditions and give more detailed info if they're found.
 
@@ -234,6 +242,13 @@ func TestArea(t *testing.T) {
 3. Iterate over the slice using range, passing the struct to your test
    3.1 Run each test with `t.Run` for better error tracing
    3.2 Also allows individual sub-tests to be called with `go test -run TestName/sub-test`
+
+### Property-Based Testing
+
+Property based tests throw random data at your code to ensure certain predefined properties always hold true.
+
+- `quick.Check(f, *quick.Config)` takes a function and an options struct. The function is called multiple times with arbitrary values, and if it returns false for any an error is thrown.
+  - By default 100 values are tried, but you can change that by passing the config like `&quick.Config{MaxCount: 10}`
 
 ## Types
 
@@ -402,7 +417,7 @@ Channels and mutexes seem to have similar functions, so remember:
 - Channels are for passing ownership of data
 - Mutexes are for managing state
 
-### Context
+### [Context](https://go.dev/blog/context)
 
 Used to manage long running goroutines. The package provides functions to derive new context values from existing ones, forming a tree in which the cancellation of one context also cancels all contexts derived from it.
 
