@@ -250,6 +250,14 @@ Property based tests throw random data at your code to ensure certain predefined
 - `quick.Check(f, *quick.Config)` takes a function and an options struct. The function is called multiple times with arbitrary values, and if it returns false for any an error is thrown.
   - By default 100 values are tried, but you can change that by passing the config like `&quick.Config{MaxCount: 10}`
 
+### Approval Tests
+
+Allow for easy testing of larger objects, string and anything else that can be saved to a file. Works similar to snapshots where if there's a divergence you can just approve the new output and it'll be copied to the test file to be used for future tests.
+
+Use it by running `go get "github.com/approvals/go-approval-tests"`, then use it like `approvaltests.VerifyString("foo", "foo")`.
+
+On the first run it'll create two files, one with 'received' in the filename and one with 'approved'. If you're happy with the output in received, copy it into approved and run the test again, it should pass. Received will be automatically deleted, while approved remains as the thing to compare future runs against.
+
 ## Types
 
 Usually declared separated by a space from the variable. If you have multiple args of the same type, it's possible to declare them with a single type after all the args like `func Add(x, y int)`.
