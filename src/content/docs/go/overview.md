@@ -457,3 +457,41 @@ Can be useful when you don't know a given type at compile time; passing `interfa
 - `val.NumField()` returns the number of fields in a struct. Panics if val is not a struct.
 - `val.Recv()` receives and returns a value from a channel, as well as a boolean which is false if the channel is closed
 - `val.Call(*args)` calls a function with the given arguments
+
+## Generics
+
+Generics allow you to write code that can work with any type that implements a given interface. You define them by adding square brackets containing the type parameters you want to use, which are pairs of interfaces and their labels.
+
+```go
+func AssertEqual[T comparable](t *testing.T, got, want T) {
+	if got != want {
+		t.Errorf("got %+v want %+v", got, want)
+	}
+}
+
+```
+
+Adding a generic `any` type here is different to just typing the parameters themselves as `any` because the generic version at least guarantees both args must be the same type, while the non-generic version allows you to pass a different type to each of got and want.
+
+Generic data structures can be defined similarly, which allows them to accept any type as long as it's always the same type.
+
+```go
+type Stack[T any] struct {
+	values []T
+}
+```
+
+It's possible to add multiple generic types to a function, and they can still accept the same type for either.
+
+```go
+func Reduce[A, B any](collection []A, accumulator func(B, A) B, initial B) B {
+	result := initial
+	for _, item := range collection {
+		result = accumulator(result, item)
+	}
+
+	return result
+}
+```
+
+Will take a collection of ints and add them up or a collection of ints and append them to a string.
