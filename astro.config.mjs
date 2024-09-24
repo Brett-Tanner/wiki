@@ -22,7 +22,7 @@ export default defineConfig({
 				},
 				{
 					label: "Books",
-					autogenerate: { directory: "books" },
+					autogenerate: { directory: "obsidian/books" },
 				},
 				{
 					label: "CSS",

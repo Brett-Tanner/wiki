@@ -1,0 +1,3 @@
+[submodule "src/content/docs/obsidian"]
+	path = src/content/docs/obsidian
+	url = git@github.com:Brett-Tanner/obsidian.git
