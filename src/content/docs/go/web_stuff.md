@@ -1,12 +1,14 @@
 ---
-title: HTML Templating
-description: Overview HTML templating package and related tools
+title: Web Stuff
+description: Web-related packages/knowledge
 editurl: false
 ---
 
+## HTML Templating
+
 HTML templating can be done with the core `html/template` package, or with something like [templ](https://github.com/a-h/templ) if you want a more JSX style syntax.
 
-## html/template
+### html/template
 
 The package lets you parse and execute HTML templates, from strings or external template files.
 
@@ -23,4 +25,10 @@ If you don't want HTML/CSS/JS escaped, wrap it in `template.HTML/CSS/JS`. Won't 
 - `Execute(io.Writer, any) error`: Execute the template and write it to `w`.
 - `ExecuteTemplate(name string, w io.Writer, data any) error`: Execute the template named `name` and write it to `w`.
 
-## templ
+### templ
+
+## Web Servers
+
+Generally created by calling `ListentAndServe(addr string, handler http.Handler)`, which starts a web server listinging on the port provided by addr and creating a goroutine for every request, which is run against `handler`.
+
+The handler interface requires a `ServeHTTP(ResponseWriter, *Request)` method and is usually implemented by creating a struct to hold the necessary data, as well as a `ServeHTTP` method. If you don't need the data storage features of a struct, you can create the handler with `http.HandlerFunc(func)` which allows you to use the passed regular function as a HTTP handler. The passed function must take the expected arguments for a HTTPHandler.

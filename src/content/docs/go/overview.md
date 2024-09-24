@@ -111,7 +111,7 @@ You can check your test coverage with `go test -cover`, while `go test -race` wi
 - `t.Errorf()` prints a formatted message and fails the test.
   - `%d` prints the value as an integer
   - `%f` prints the value as a float, add `.n` to specify the number of decimal places
-  - `%g` prints teh value as a float to the last significant digit
+  - `%g` prints the value as a float to the last significant digit
   - `%s` prints the value as uninterpreted bytes of the string or slice
   - `%q` prints the value in quotes
   - `%v` prints the value as is
