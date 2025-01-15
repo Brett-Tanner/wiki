@@ -296,6 +296,17 @@ Attempting to access an index outside the slice's capacity will cause a runtime 
 
 You can slice a slice (or an array) with `slice[<start>:<end>]`. Omitting the end slices everything from the start, while omitting the start slices everything until the end. Remember that slices of an array will keep that array around in memory until they disappear, so if you want the array to be garbage collected make a copy of the slice and use that.
 
+### Embedding
+
+You can 'embed' a type/interface in another one like to do the equivalent of `extends` or inheritance in other languages. This example gives `PlayerServer` access to all the public methods and fields of `http.Handler`.
+
+```go
+type PlayerServer struct {
+	store PlayerStore
+	http.Handler
+}
+```
+
 ### Errors
 
 It's idiomatic to return errors to be handled by the receiver. You'll need to add `error` as the return type, and create a customised error to return with `errors.New(<string>)`.
